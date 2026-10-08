@@ -1,0 +1,9 @@
+{
+  "name": "nova-image-video-studio",
+  "version": "1.0.0",
+  "description": "Mobile-friendly AI image and video generation web app",
+  "main": "server.js",
+  "scripts": {"start": "node server.js"},
+  "engines": {"node": ">=18"},
+  "dependencies": {"express": "^4.21.2"}
+}
