@@ -1,23 +1,11 @@
-# Nova Image & Video Studio
+# Nova AI Studio Complete Starter
 
-A mobile-friendly Node/Express web app with a text-to-image UI and text-to-video UI.
+Upload these four files to the repository root. Render Start Command: `npm start`.
 
-## Run locally
-1. Install Node.js 18 or newer.
-2. Run `npm install`
-3. Set environment variables (see `.env.example`) in your shell or hosting dashboard.
-4. Run `npm start` and open `http://localhost:3000`.
+Set server-side environment variables in Render:
+- `POLLINATIONS_API_KEY` for image and chat (provider endpoint/model access may change)
+- `FAL_KEY` for video
+- optional `CHAT_MODEL` (default `openai`)
+- optional `VIDEO_MODEL` (default `fal-ai/wan-t2v`)
 
-## Deploy to Render
-1. Create a **new Web Service** from this folder/repository (keep your existing Nova app unchanged).
-2. Build command: `npm install`
-3. Start command: `npm start`
-4. Add `POLLINATIONS_API_KEY` for image generation and `FAL_KEY` for video generation in Render's Environment tab.
-5. Check `/api/health` after deployment.
-
-## Provider notes
-- Image route uses `https://gen.pollinations.ai/image/` and a server-side bearer key. Confirm your provider account/key and model access.
-- Video route uses the fal.ai queue API. Confirm the `VIDEO_MODEL` slug, request schema, account access, and pricing with fal.ai before production use; provider APIs and model availability can change.
-- Keys must remain in server environment variables. Do not put keys in `public/index.html`, GitHub, or chat.
-- The app does not promise unlimited/free generation. Providers may rate-limit or charge for requests.
-- Generated media may be served from provider URLs; availability and retention are controlled by the provider.
+Important: This is a starter, not deployed or live-provider tested. Image-to-image UI exists but endpoint returns 501 until a compatible provider integration is added. Video request submission is implemented but status/result polling needs provider-specific configuration. Provider policies, availability and limits apply; unlimited use is not promised. Never expose API keys in `index.html` or GitHub.
