@@ -13,7 +13,9 @@ app.get("/api/health", (_req, res) => {
     imageReady: Boolean(process.env.POLLINATIONS_API_KEY),
     chatReady: Boolean(process.env.POLLINATIONS_API_KEY),
     videoReady: Boolean(process.env.FAL_KEY),
-    videoModel: process.env.VIDEO_MODEL || "fal-ai/wan/v2.2-a14b/text-to-video"
+    videoModel:
+      process.env.VIDEO_MODEL ||
+      "fal-ai/wan/v2.2-a14b/text-to-video"
   });
 });
 
@@ -21,11 +23,19 @@ app.post("/api/image", async (req, res) => {
   try {
     const prompt = String(req.body.prompt || "").trim();
     const model = String(req.body.model || "flux");
-    const width = Math.max(256, Math.min(1536, Number(req.body.width) || 1024));
-    const height = Math.max(256, Math.min(1536, Number(req.body.height) || 1024));
+    const width = Math.max(
+      256,
+      Math.min(1536, Number(req.body.width) || 1024)
+    );
+    const height = Math.max(
+      256,
+      Math.min(1536, Number(req.body.height) || 1024)
+    );
 
     if (!prompt) {
-      return res.status(400).json({ error: "Please enter an image prompt." });
+      return res.status(400).json({
+        error: "Please enter an image prompt."
+      });
     }
 
     if (!process.env.POLLINATIONS_API_KEY) {
@@ -34,7 +44,11 @@ app.post("/api/image", async (req, res) => {
       });
     }
 
-    const url = new URL("https://gen.pollinations.ai/image/" + encodeURIComponent(prompt));
+    const url = new URL(
+      "https://gen.pollinations.ai/image/" +
+      encodeURIComponent(prompt)
+    );
+
     url.searchParams.set("model", model);
     url.searchParams.set("width", String(width));
     url.searchParams.set("height", String(height));
@@ -42,32 +56,44 @@ app.post("/api/image", async (req, res) => {
 
     const upstream = await fetch(url, {
       headers: {
-        Authorization: "Bearer " + process.env.POLLINATIONS_API_KEY
+        Authorization:
+          "Bearer " + process.env.POLLINATIONS_API_KEY
       },
       signal: AbortSignal.timeout(120000)
     });
 
     if (!upstream.ok) {
       const detail = (await upstream.text()).slice(0, 500);
+
       return res.status(502).json({
         error: `Image provider error (${upstream.status}). ${detail}`
       });
     }
 
-    res.set("Content-Type", upstream.headers.get("content-type") || "image/jpeg");
+    res.set(
+      "Content-Type",
+      upstream.headers.get("content-type") || "image/jpeg"
+    );
     res.set("Cache-Control", "no-store");
+
     res.send(Buffer.from(await upstream.arrayBuffer()));
   } catch (e) {
-    res.status(500).json({ error: "Image generation failed: " + e.message });
+    res.status(500).json({
+      error: "Image generation failed: " + e.message
+    });
   }
 });
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const messages = Array.isArray(req.body.messages) ? req.body.messages : [];
+    const messages = Array.isArray(req.body.messages)
+      ? req.body.messages
+      : [];
 
     if (!messages.length) {
-      return res.status(400).json({ error: "Send a message first." });
+      return res.status(400).json({
+        error: "Send a message first."
+      });
     }
 
     if (!process.env.POLLINATIONS_API_KEY) {
@@ -77,28 +103,36 @@ app.post("/api/chat", async (req, res) => {
     }
 
     const safeMessages = messages.slice(-12).map(m => ({
-      role: ["system", "user", "assistant"].includes(m.role) ? m.role : "user",
+      role: ["system", "user", "assistant"].includes(m.role)
+        ? m.role
+        : "user",
       content: String(m.content || "").slice(0, 8000)
     }));
 
-    const upstream = await fetch("https://gen.pollinations.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + process.env.POLLINATIONS_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: process.env.CHAT_MODEL || "openai",
-        messages: safeMessages
-      }),
-      signal: AbortSignal.timeout(120000)
-    });
+    const upstream = await fetch(
+      "https://gen.pollinations.ai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization:
+            "Bearer " + process.env.POLLINATIONS_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: process.env.CHAT_MODEL || "openai",
+          messages: safeMessages
+        }),
+        signal: AbortSignal.timeout(120000)
+      }
+    );
 
     const data = await upstream.json().catch(() => ({}));
 
     if (!upstream.ok) {
       return res.status(502).json({
-        error: data.error?.message || data.message ||
+        error:
+          data.error?.message ||
+          data.message ||
           `Chat provider error (${upstream.status}).`
       });
     }
@@ -113,19 +147,33 @@ app.post("/api/chat", async (req, res) => {
 
     res.json({ reply });
   } catch (e) {
-    res.status(500).json({ error: "Chat failed: " + e.message });
+    res.status(500).json({
+      error: "Chat failed: " + e.message
+    });
   }
 });
 
 app.post("/api/video", async (req, res) => {
   try {
     const prompt = String(req.body.prompt || "").trim();
-    const duration = Math.max(2, Math.min(10, Number(req.body.duration) || 5));
-    const ratioInput = String(req.body.ratio || "16:9");
-    const aspectRatio = ratioInput === "9:16" ? "9:16" : "16:9";
+    const duration = Math.max(
+      2,
+      Math.min(10, Number(req.body.duration) || 5)
+    );
+
+    const ratioInput = String(req.body.ratio || "16:9")
+      .trim()
+      .toLowerCase();
+
+    // FIX: Accept both frontend values and aspect-ratio values.
+    const aspectRatio = ["9:16", "portrait"].includes(ratioInput)
+      ? "9:16"
+      : "16:9";
 
     if (!prompt) {
-      return res.status(400).json({ error: "Please enter a video prompt." });
+      return res.status(400).json({
+        error: "Please enter a video prompt."
+      });
     }
 
     if (!process.env.FAL_KEY) {
@@ -134,29 +182,39 @@ app.post("/api/video", async (req, res) => {
       });
     }
 
-    const model = process.env.VIDEO_MODEL ||
+    const model =
+      process.env.VIDEO_MODEL ||
       "fal-ai/wan/v2.2-a14b/text-to-video";
 
-    const upstream = await fetch("https://queue.fal.run/" + model, {
-      method: "POST",
-      headers: {
-        Authorization: "Key " + process.env.FAL_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        prompt,
-        num_frames: Math.max(33, Math.min(121, Math.round(duration * 16))),
-        aspect_ratio: aspectRatio,
-        resolution: "720p"
-      }),
-      signal: AbortSignal.timeout(60000)
-    });
+    const upstream = await fetch(
+      "https://queue.fal.run/" + model,
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Key " + process.env.FAL_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          prompt,
+          num_frames: Math.max(
+            33,
+            Math.min(121, Math.round(duration * 16))
+          ),
+          aspect_ratio: aspectRatio,
+          resolution: "720p"
+        }),
+        signal: AbortSignal.timeout(60000)
+      }
+    );
 
     const data = await upstream.json().catch(() => ({}));
 
     if (!upstream.ok) {
       return res.status(502).json({
-        error: data.detail || data.message || data.error ||
+        error:
+          data.detail ||
+          data.message ||
+          data.error ||
           `Video provider error (${upstream.status}).`
       });
     }
@@ -194,11 +252,18 @@ async function proxyFalUrl(req, res, urlParam, label) {
     try {
       parsed = new URL(target);
     } catch {
-      return res.status(400).json({ error: "Invalid provider URL." });
+      return res.status(400).json({
+        error: "Invalid provider URL."
+      });
     }
 
-    if (parsed.protocol !== "https:" || parsed.hostname !== "queue.fal.run") {
-      return res.status(400).json({ error: "Invalid provider URL." });
+    if (
+      parsed.protocol !== "https:" ||
+      parsed.hostname !== "queue.fal.run"
+    ) {
+      return res.status(400).json({
+        error: "Invalid provider URL."
+      });
     }
 
     const upstream = await fetch(parsed.href, {
